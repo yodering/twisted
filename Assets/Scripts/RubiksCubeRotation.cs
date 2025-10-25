@@ -9,25 +9,25 @@ public class RubiksCubeRotation : MonoBehaviour
     
     void Update()
     {
-        if (isRotating) return; // Don't allow input during rotation
+        if (isRotating) return;
         
-        // Test controls - map to different faces
-        if (Input.GetKeyDown(KeyCode.F)) StartCoroutine(RotateFace(Vector3.forward, Vector3.up));
-        if (Input.GetKeyDown(KeyCode.B)) StartCoroutine(RotateFace(Vector3.back, Vector3.up));
-        if (Input.GetKeyDown(KeyCode.R)) StartCoroutine(RotateFace(Vector3.right, Vector3.up));
-        if (Input.GetKeyDown(KeyCode.L)) StartCoroutine(RotateFace(Vector3.left, Vector3.up));
-        if (Input.GetKeyDown(KeyCode.U)) StartCoroutine(RotateFace(Vector3.up, Vector3.back));
-        if (Input.GetKeyDown(KeyCode.D)) StartCoroutine(RotateFace(Vector3.down, Vector3.forward));
+        // Clockwise rotations
+        if (Input.GetKeyDown(KeyCode.F)) StartCoroutine(RotateFace(Vector3.forward, Vector3.forward, 90f));
+        if (Input.GetKeyDown(KeyCode.B)) StartCoroutine(RotateFace(Vector3.back, Vector3.back, 90f));
+        if (Input.GetKeyDown(KeyCode.R)) StartCoroutine(RotateFace(Vector3.right, Vector3.right, 90f));
+        if (Input.GetKeyDown(KeyCode.L)) StartCoroutine(RotateFace(Vector3.left, Vector3.left, 90f));
+        if (Input.GetKeyDown(KeyCode.U)) StartCoroutine(RotateFace(Vector3.up, Vector3.up, 90f));
+        if (Input.GetKeyDown(KeyCode.D)) StartCoroutine(RotateFace(Vector3.down, Vector3.down, 90f));
     }
     
-    IEnumerator RotateFace(Vector3 faceNormal, Vector3 rotationAxis)
+    IEnumerator RotateFace(Vector3 faceNormal, Vector3 rotationAxis, float angle)
     {
         isRotating = true;
         
         // Get all cubelets on this face
         List<Transform> cubeletsToRotate = GetCubeletsOnFace(faceNormal);
         
-        // Create temporary pivot point
+        // Create temporary pivot at cube center
         GameObject pivot = new GameObject("RotationPivot");
         pivot.transform.position = transform.position;
         pivot.transform.parent = transform;
@@ -38,18 +38,21 @@ public class RubiksCubeRotation : MonoBehaviour
             cubelet.parent = pivot.transform;
         }
         
-        // Rotate the pivot
+        // Rotate around the face's normal axis
         float rotated = 0f;
-        while (rotated < 90f)
+        float targetRotation = Mathf.Abs(angle);
+        float direction = Mathf.Sign(angle);
+        
+        while (rotated < targetRotation)
         {
             float rotationThisFrame = rotationSpeed * Time.deltaTime;
-            pivot.transform.Rotate(rotationAxis, rotationThisFrame, Space.World);
+            if (rotated + rotationThisFrame > targetRotation)
+                rotationThisFrame = targetRotation - rotated;
+                
+            pivot.transform.Rotate(rotationAxis, rotationThisFrame * direction, Space.World);
             rotated += rotationThisFrame;
             yield return null;
         }
-        
-        // Snap to exact 90 degrees
-        pivot.transform.Rotate(rotationAxis, 90f - rotated, Space.World);
         
         // Unparent cubelets back to main cube
         foreach (Transform cubelet in cubeletsToRotate)

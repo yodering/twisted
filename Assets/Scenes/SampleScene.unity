@@ -545,6 +545,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6477556957642656982, guid: ee19c9e30179442228719708fe2974d2, type: 3}
+      propertyPath: m_Materials.Array.size
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 8288246044090784470, guid: ee19c9e30179442228719708fe2974d2, type: 3}
       propertyPath: m_Name
       value: cubeletPrefab
