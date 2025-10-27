@@ -16,6 +16,8 @@ public class RubiksCubeGenerator : MonoBehaviour
     void Start()
     {
         GenerateCube();
+
+         transform.rotation = Quaternion.Euler(0, 180, 0);
     }
     
     void GenerateCube()
