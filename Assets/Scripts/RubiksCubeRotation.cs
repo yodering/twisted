@@ -15,12 +15,12 @@ public class RubiksCubeRotation : MonoBehaviour
     if (Input.GetKeyDown(KeyCode.F))
     {
         Debug.Log("F key pressed - rotating Front face clockwise");
-        StartCoroutine(RotateFace(Vector3.forward, Vector3.back, 90f)); // Swapped - was back
+        StartCoroutine(RotateFace(Vector3.forward, Vector3.back, 90f));
     }
     if (Input.GetKeyDown(KeyCode.B))
     {
         Debug.Log("B key pressed - rotating Back face clockwise");
-        StartCoroutine(RotateFace(Vector3.back, Vector3.forward, -90f)); // Swapped - was forward
+        StartCoroutine(RotateFace(Vector3.back, Vector3.forward, -90f));
     }
     if (Input.GetKeyDown(KeyCode.R))
     {
