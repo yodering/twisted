@@ -9,8 +9,8 @@ public class FloorController : MonoBehaviour
 {
     [Header("Floor Settings")]
     public float floorY = -4f;
-    public float tileSize = 3f;
-    public float tileSpacing = 0.1f;
+    public float tileSize = 5f;
+    public float tileSpacing = 0.2f;
     public float colorTransitionSpeed = 3f;
 
     private GameObject[,] floorTiles = new GameObject[3, 3];
