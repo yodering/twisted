@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
 
 /// <summary>
@@ -8,20 +9,50 @@ public class FloorController : MonoBehaviour
 {
     [Header("Floor Settings")]
     public float floorY = -4f;
-    public float tileSize = 3f; 
+    public float tileSize = 3f;
     public float tileSpacing = 0.1f;
+    public float colorTransitionSpeed = 3f;
 
     private GameObject[,] floorTiles = new GameObject[3, 3];
     private MeshRenderer[,] floorRenderers = new MeshRenderer[3, 3];
+    private Color[,] targetColors = new Color[3, 3];
+    private RubiksCubeController cubeController;
+    private bool wasRotating = false;
 
     void Start()
     {
+        cubeController = GetComponent<RubiksCubeController>();
+        if (cubeController == null)
+        {
+            Debug.LogWarning("FloorController: No RubiksCubeController found. Floor will update every frame.");
+        }
+
         GenerateFloor();
+
+        // Initial color white
+        for (int x = 0; x < 3; x++)
+        {
+            for (int z = 0; z < 3; z++)
+            {
+                targetColors[x, z] = Color.white;
+            }
+        }
     }
 
     void Update()
     {
-        SyncFloorColors();
+        // Check if cube just stopped rotating
+        bool isRotating = cubeController != null && cubeController.IsRotating;
+
+        if (wasRotating && !isRotating)
+        {
+            UpdateTargetColors();
+        }
+
+        wasRotating = isRotating;
+
+        // Smoothly lerp!!! colors
+        LerpFloorColors();
     }
 
     void GenerateFloor()
@@ -58,52 +89,76 @@ public class FloorController : MonoBehaviour
                 if (floorRenderers[arrayX, arrayZ] != null)
                 {
                     Material mat = new Material(Shader.Find("Standard"));
-                    mat.color = Color.gray;
+                    mat.color = Color.white;
                     floorRenderers[arrayX, arrayZ].material = mat;
                 }
             }
         }
     }
 
-    void SyncFloorColors()
+    void UpdateTargetColors()
     {
-        // Iterate through all stickers on the cube
-
-        float topFaceThreshold = 1.0f; // Stickers above this Y are considered "Up"
+        // Find the 9 highest stickers by world Y position
+        List<Transform> allStickers = new List<Transform>();
 
         foreach (Transform cubelet in transform)
         {
-            // Only check cubelets that are roughly at the top layer
-            // Cubelet centers are at y = -1, 0, 1. Top layer is y=1.
-            if (cubelet.localPosition.y < 0.5f) continue;
+            if (!cubelet.name.StartsWith("Cubelet")) continue;
 
             foreach (Transform sticker in cubelet)
             {
-                // We are looking for the sticker that is facing UP.
-                
-                if (sticker.position.y > topFaceThreshold)
+                if (sticker.name.StartsWith("Sticker"))
                 {
-                    // This sticker is on the top face.
-                    // Determine which grid cell it belongs to based on X and Z position.
-                    
-                    int xIndex = Mathf.RoundToInt(sticker.position.x) + 1;
-                    int zIndex = Mathf.RoundToInt(sticker.position.z) + 1;
+                    allStickers.Add(sticker);
+                }
+            }
+        }
 
-                    // Bounds check
-                    if (xIndex >= 0 && xIndex < 3 && zIndex >= 0 && zIndex < 3)
-                    {
-                        MeshRenderer stickerRenderer = sticker.GetComponent<MeshRenderer>();
-                        MeshRenderer tileRenderer = floorRenderers[xIndex, zIndex];
+        // Sort by world Y position (highest first)
+        allStickers.Sort((a, b) => b.position.y.CompareTo(a.position.y));
 
-                        if (stickerRenderer != null && tileRenderer != null)
-                        {
-                            // Sync color
-                            if (tileRenderer.material.color != stickerRenderer.material.color)
-                            {
-                                tileRenderer.material.color = stickerRenderer.material.color;
-                            }
-                        }
-                    }
+        for (int i = 0; i < Mathf.Min(9, allStickers.Count); i++)
+        {
+            Transform sticker = allStickers[i];
+
+            // Map sticker's X and Z world position to floor grid
+            Vector3 worldPos = sticker.position;
+
+            int xIndex = Mathf.RoundToInt(worldPos.x) + 1;
+            int zIndex = Mathf.RoundToInt(worldPos.z) + 1;
+
+            // bounds
+            if (xIndex >= 0 && xIndex < 3 && zIndex >= 0 && zIndex < 3)
+            {
+                MeshRenderer stickerRenderer = sticker.GetComponent<MeshRenderer>();
+
+                if (stickerRenderer != null)
+                {
+                    targetColors[xIndex, zIndex] = stickerRenderer.material.color;
+                }
+            }
+        }
+    }
+
+
+    // simple lerp implementation
+    void LerpFloorColors()
+    {
+        for (int x = 0; x < 3; x++)
+        {
+            for (int z = 0; z < 3; z++)
+            {
+                MeshRenderer tileRenderer = floorRenderers[x, z];
+                if (tileRenderer != null)
+                {
+                    Color currentColor = tileRenderer.material.color;
+                    Color targetColor = targetColors[x, z];
+
+                    tileRenderer.material.color = Color.Lerp(
+                        currentColor,
+                        targetColor,
+                        Time.deltaTime * colorTransitionSpeed
+                    );
                 }
             }
         }
