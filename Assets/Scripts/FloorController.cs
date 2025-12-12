@@ -8,15 +8,16 @@ using System.Collections.Generic;
 public class FloorController : MonoBehaviour
 {
     [Header("Floor Settings")]
-    public float floorY = -4f;
-    public float tileSize = 5f;
-    public float tileSpacing = 0.2f;
+    public float floorY = -0.4f;
+    public float tileSize = 20f;
+    public float tileSpacing = 0.1f;
     public float colorTransitionSpeed = 3f;
 
     private GameObject[,] floorTiles = new GameObject[3, 3];
     private MeshRenderer[,] floorRenderers = new MeshRenderer[3, 3];
     private Color[,] targetColors = new Color[3, 3];
     private RubiksCubeController cubeController;
+    private VRCubeRotation vrCubeRotation;
     private bool wasRotating = false;
 
     void Start()
@@ -24,7 +25,21 @@ public class FloorController : MonoBehaviour
         cubeController = GetComponent<RubiksCubeController>();
         if (cubeController == null)
         {
-            Debug.LogWarning("FloorController: No RubiksCubeController found. Floor will update every frame.");
+            Debug.LogError("[FLOOR] No RubiksCubeController found on " + gameObject.name + "!");
+        }
+        else
+        {
+            Debug.Log("[FLOOR] RubiksCubeController found successfully");
+        }
+
+        vrCubeRotation = GetComponent<VRCubeRotation>();
+        if (vrCubeRotation == null)
+        {
+            Debug.LogWarning("[FLOOR] No VRCubeRotation found. VR rotations won't update floor.");
+        }
+        else
+        {
+            Debug.Log("[FLOOR] VRCubeRotation found successfully");
         }
 
         GenerateFloor();
@@ -37,21 +52,35 @@ public class FloorController : MonoBehaviour
                 targetColors[x, z] = Color.white;
             }
         }
+
+        // Delay floor update to ensure cubelets are generated first
+        StartCoroutine(DelayedFloorUpdate());
+    }
+
+    IEnumerator DelayedFloorUpdate()
+    {
+        // Wait one frame to ensure cube generation is complete
+        yield return null;
+
+        Debug.Log("[FLOOR] Initializing floor colors on start");
+        UpdateTargetColors();
     }
 
     void Update()
     {
-        // Check if cube just stopped rotating
-        bool isRotating = cubeController != null && cubeController.IsRotating;
+        // check if cube just stopped rotating
+        bool isRotating = (cubeController != null && cubeController.IsRotating) ||
+                          (vrCubeRotation != null && vrCubeRotation.IsVRRotating);
 
         if (wasRotating && !isRotating)
         {
+            Debug.Log("[FLOOR] Rotation complete - updating floor colors");
             UpdateTargetColors();
         }
 
         wasRotating = isRotating;
 
-        // Smoothly lerp!!! colors
+        // smoothly lerp!!! colors
         LerpFloorColors();
     }
 
@@ -88,9 +117,12 @@ public class FloorController : MonoBehaviour
 
                 if (floorRenderers[arrayX, arrayZ] != null)
                 {
+                    // Create a unique material instance for each tile
                     Material mat = new Material(Shader.Find("Standard"));
                     mat.color = Color.white;
                     floorRenderers[arrayX, arrayZ].material = mat;
+
+                    Debug.Log($"[FLOOR] Created floor tile [{arrayX},{arrayZ}] at world pos {tile.transform.position}");
                 }
             }
         }
@@ -98,46 +130,192 @@ public class FloorController : MonoBehaviour
 
     void UpdateTargetColors()
     {
-        // Find the 9 highest stickers by world Y position
-        List<Transform> allStickers = new List<Transform>();
+        // Debug.Log($"[FLOOR] ========== UpdateTargetColors called ==========");
 
-        foreach (Transform cubelet in transform)
+        List<Transform> whiteFaceCubelets = new List<Transform>();
+        float tolerance = 0.1f;
+
+        foreach (Transform child in transform)
         {
-            if (!cubelet.name.StartsWith("Cubelet")) continue;
-
-            foreach (Transform sticker in cubelet)
+            if (child.name.StartsWith("Cubelet"))
             {
-                if (sticker.name.StartsWith("Sticker"))
+                Vector3 localPos = child.localPosition;
+                // get cubelets at y=1 (original white face position in local space)
+                if (Mathf.Abs(localPos.y - 1f) < tolerance)
                 {
-                    allStickers.Add(sticker);
+                    whiteFaceCubelets.Add(child);
                 }
             }
         }
 
-        // Sort by world Y position (highest first)
-        allStickers.Sort((a, b) => b.position.y.CompareTo(a.position.y));
+        Debug.Log($"[FLOOR] Found {whiteFaceCubelets.Count} cubelets on white face (local y=1)");
 
-        for (int i = 0; i < Mathf.Min(9, allStickers.Count); i++)
+        int stickersFound = 0;
+
+        foreach (Transform cubelet in whiteFaceCubelets)
         {
-            Transform sticker = allStickers[i];
+            Vector3 cubeletPos = cubelet.localPosition;
 
-            // Map sticker's X and Z world position to floor grid
-            Vector3 worldPos = sticker.position;
+            // find the sticker with highest world Y position (the one pointing up in world space)
+            Transform topSticker = null;
+            float highestWorldY = float.MinValue;
 
-            int xIndex = Mathf.RoundToInt(worldPos.x) + 1;
-            int zIndex = Mathf.RoundToInt(worldPos.z) + 1;
-
-            // bounds
-            if (xIndex >= 0 && xIndex < 3 && zIndex >= 0 && zIndex < 3)
+            foreach (Transform child in cubelet)
             {
-                MeshRenderer stickerRenderer = sticker.GetComponent<MeshRenderer>();
+                if (!child.name.StartsWith("Sticker")) continue;
 
-                if (stickerRenderer != null)
+                // use world Y position to find which sticker is on top
+                float stickerWorldY = child.position.y;
+                if (stickerWorldY > highestWorldY)
                 {
-                    targetColors[xIndex, zIndex] = stickerRenderer.material.color;
+                    highestWorldY = stickerWorldY;
+                    topSticker = child;
+                }
+            }
+
+            if (topSticker != null)
+            {
+                MeshRenderer renderer = topSticker.GetComponent<MeshRenderer>();
+                if (renderer != null && renderer.material != null)
+                {
+                    Color stickerColor = renderer.material.color;
+
+                    // map cubelet position to floor grid
+                    int gridX = Mathf.RoundToInt(cubeletPos.x) + 1;
+                    int gridZ = Mathf.RoundToInt(cubeletPos.z) + 1;
+
+                    if (gridX >= 0 && gridX < 3 && gridZ >= 0 && gridZ < 3)
+                    {
+                        targetColors[gridX, gridZ] = stickerColor;
+                        stickersFound++;
+                        // Debug.Log($"[FLOOR] Cubelet ({cubeletPos.x:F0},{cubeletPos.y:F0},{cubeletPos.z:F0}) sticker={topSticker.name} -> floor[{gridX},{gridZ}] = {ColorToName(stickerColor)}");
+                    }
+                }
+            }
+            else
+            {
+                // Debug.LogWarning($"[FLOOR] Cubelet at ({cubeletPos.x:F0},{cubeletPos.y:F0},{cubeletPos.z:F0}) has no stickers!");
+            }
+        }
+
+        // Debug.Log($"[FLOOR] ========== Complete: found {stickersFound}/9 stickers ==========");
+    }
+
+    string ColorToName(Color c)
+    {
+        if (c == Color.white) return "White";
+        if (c == Color.yellow) return "Yellow";
+        if (c == Color.red) return "Red";
+        if (c == Color.green) return "Green";
+        if (c == Color.blue) return "Blue";
+        if (Mathf.Abs(c.r - 1f) < 0.1f && Mathf.Abs(c.g - 0.5f) < 0.1f && Mathf.Abs(c.b - 0f) < 0.1f) return "Orange";
+        return $"RGB({c.r:F2},{c.g:F2},{c.b:F2})";
+    }
+
+    List<Transform> GetCubeletsOnFace(Vector3 faceNormal)
+    {
+        List<Transform> cubelets = new List<Transform>();
+        float tolerance = 0.1f;
+
+        foreach (Transform child in transform)
+        {
+            if (child.name.StartsWith("Cubelet"))
+            {
+                Vector3 localPos = child.localPosition;
+
+                // check which axis this face corresponds to
+                if (faceNormal == Vector3.up && Mathf.Abs(localPos.y - 1f) < tolerance)
+                    cubelets.Add(child);
+                else if (faceNormal == Vector3.down && Mathf.Abs(localPos.y + 1f) < tolerance)
+                    cubelets.Add(child);
+                else if (faceNormal == Vector3.right && Mathf.Abs(localPos.x - 1f) < tolerance)
+                    cubelets.Add(child);
+                else if (faceNormal == Vector3.left && Mathf.Abs(localPos.x + 1f) < tolerance)
+                    cubelets.Add(child);
+                else if (faceNormal == Vector3.forward && Mathf.Abs(localPos.z - 1f) < tolerance)
+                    cubelets.Add(child);
+                else if (faceNormal == Vector3.back && Mathf.Abs(localPos.z + 1f) < tolerance)
+                    cubelets.Add(child);
+            }
+        }
+
+        return cubelets;
+    }
+
+    List<Transform> GetCubeletsOnLogicalFace(Vector3 faceNormal)
+    {
+        List<Transform> cubelets = new List<Transform>();
+        float tolerance = 0.1f;
+
+        // convert world-space face normal to local space
+        Vector3 localNormal = transform.InverseTransformDirection(faceNormal).normalized;
+
+        foreach (Transform child in transform)
+        {
+            if (child.name.StartsWith("Cubelet"))
+            {
+                Vector3 localPos = child.localPosition;
+
+                // determine which axis this face is on
+                Vector3 absNormal = new Vector3(Mathf.Abs(localNormal.x), Mathf.Abs(localNormal.y), Mathf.Abs(localNormal.z));
+
+                if (absNormal.x > absNormal.y && absNormal.x > absNormal.z)
+                {
+                    // X-axis face
+                    float targetX = Mathf.Sign(localNormal.x) * 1f;
+                    if (Mathf.Abs(localPos.x - targetX) < tolerance)
+                        cubelets.Add(child);
+                }
+                else if (absNormal.y > absNormal.x && absNormal.y > absNormal.z)
+                {
+                    // Y-axis face
+                    float targetY = Mathf.Sign(localNormal.y) * 1f;
+                    if (Mathf.Abs(localPos.y - targetY) < tolerance)
+                        cubelets.Add(child);
+                }
+                else
+                {
+                    // Z-axis face
+                    float targetZ = Mathf.Sign(localNormal.z) * 1f;
+                    if (Mathf.Abs(localPos.z - targetZ) < tolerance)
+                        cubelets.Add(child);
                 }
             }
         }
+
+        return cubelets;
+    }
+
+    Vector2Int MapCubeletToFloorGrid(Vector3 cubeletLocalPos, Vector3 upFaceWorldAxis)
+    {
+        // convert Up face axis to local space
+        Vector3 localUpAxis = transform.InverseTransformDirection(upFaceWorldAxis).normalized;
+
+        // determine which local axis is the Up face
+        Vector3 absAxis = new Vector3(Mathf.Abs(localUpAxis.x), Mathf.Abs(localUpAxis.y), Mathf.Abs(localUpAxis.z));
+
+        int x, z;
+
+        if (absAxis.y > absAxis.x && absAxis.y > absAxis.z)
+        {
+            // up face is on Y axis (normal orientation)
+            x = Mathf.RoundToInt(cubeletLocalPos.x) + 1;
+            z = Mathf.RoundToInt(cubeletLocalPos.z) + 1;
+        }
+        else if (absAxis.x > absAxis.y && absAxis.x > absAxis.z)
+        {
+            // up face is on X axis (cube rotated 90 degrees)
+            x = Mathf.RoundToInt(cubeletLocalPos.y) + 1;
+            z = Mathf.RoundToInt(cubeletLocalPos.z) + 1;
+        }
+        else
+        {
+            // up face is on Z axis (cube rotated to face forward/back)
+            x = Mathf.RoundToInt(cubeletLocalPos.x) + 1;
+            z = Mathf.RoundToInt(cubeletLocalPos.y) + 1;
+        }
+
+        return new Vector2Int(x, z);
     }
 
 
@@ -149,16 +327,19 @@ public class FloorController : MonoBehaviour
             for (int z = 0; z < 3; z++)
             {
                 MeshRenderer tileRenderer = floorRenderers[x, z];
-                if (tileRenderer != null)
+                if (tileRenderer != null && tileRenderer.material != null)
                 {
                     Color currentColor = tileRenderer.material.color;
                     Color targetColor = targetColors[x, z];
 
-                    tileRenderer.material.color = Color.Lerp(
-                        currentColor,
-                        targetColor,
-                        Time.deltaTime * colorTransitionSpeed
-                    );
+                    Color newColor = Color.Lerp(currentColor, targetColor, Time.deltaTime * colorTransitionSpeed);
+                    tileRenderer.material.color = newColor;
+
+                    // debug only when colors are significantly different
+                    if (Vector4.Distance(currentColor, targetColor) > 0.1f && Time.frameCount % 60 == 0)
+                    {
+                        Debug.Log($"[FLOOR] Lerping tile [{x},{z}] from {currentColor} to {targetColor}, now={newColor}");
+                    }
                 }
             }
         }

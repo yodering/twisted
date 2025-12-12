@@ -183,12 +183,12 @@ InputManager:
     joyNum: 0
   - serializedVersion: 3
     m_Name: Fire1
-    descriptiveName: 
-    descriptiveNegativeName: 
-    negativeButton: 
-    positiveButton: joystick button 0
-    altNegativeButton: 
-    altPositiveButton: 
+    descriptiveName:
+    descriptiveNegativeName:
+    negativeButton:
+    positiveButton:
+    altNegativeButton:
+    altPositiveButton:
     gravity: 1000
     dead: 0.001
     sensitivity: 1000
@@ -199,12 +199,12 @@ InputManager:
     joyNum: 0
   - serializedVersion: 3
     m_Name: Fire2
-    descriptiveName: 
-    descriptiveNegativeName: 
-    negativeButton: 
-    positiveButton: joystick button 1
-    altNegativeButton: 
-    altPositiveButton: 
+    descriptiveName:
+    descriptiveNegativeName:
+    negativeButton:
+    positiveButton:
+    altNegativeButton:
+    altPositiveButton:
     gravity: 1000
     dead: 0.001
     sensitivity: 1000
@@ -215,12 +215,12 @@ InputManager:
     joyNum: 0
   - serializedVersion: 3
     m_Name: Fire3
-    descriptiveName: 
-    descriptiveNegativeName: 
-    negativeButton: 
-    positiveButton: joystick button 2
-    altNegativeButton: 
-    altPositiveButton: 
+    descriptiveName:
+    descriptiveNegativeName:
+    negativeButton:
+    positiveButton:
+    altNegativeButton:
+    altPositiveButton:
     gravity: 1000
     dead: 0.001
     sensitivity: 1000
@@ -231,12 +231,12 @@ InputManager:
     joyNum: 0
   - serializedVersion: 3
     m_Name: Jump
-    descriptiveName: 
-    descriptiveNegativeName: 
-    negativeButton: 
-    positiveButton: joystick button 3
-    altNegativeButton: 
-    altPositiveButton: 
+    descriptiveName:
+    descriptiveNegativeName:
+    negativeButton:
+    positiveButton:
+    altNegativeButton:
+    altPositiveButton:
     gravity: 1000
     dead: 0.001
     sensitivity: 1000
@@ -247,12 +247,12 @@ InputManager:
     joyNum: 0
   - serializedVersion: 3
     m_Name: Submit
-    descriptiveName: 
-    descriptiveNegativeName: 
-    negativeButton: 
+    descriptiveName:
+    descriptiveNegativeName:
+    negativeButton:
     positiveButton: return
-    altNegativeButton: 
-    altPositiveButton: joystick button 0
+    altNegativeButton:
+    altPositiveButton:
     gravity: 1000
     dead: 0.001
     sensitivity: 1000
@@ -279,12 +279,12 @@ InputManager:
     joyNum: 0
   - serializedVersion: 3
     m_Name: Cancel
-    descriptiveName: 
-    descriptiveNegativeName: 
-    negativeButton: 
+    descriptiveName:
+    descriptiveNegativeName:
+    negativeButton:
     positiveButton: escape
-    altNegativeButton: 
-    altPositiveButton: joystick button 1
+    altNegativeButton:
+    altPositiveButton:
     gravity: 1000
     dead: 0.001
     sensitivity: 1000

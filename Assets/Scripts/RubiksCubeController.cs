@@ -291,7 +291,7 @@ public class RubiksCubeController : MonoBehaviour
 
     #endregion
 
-    #region Rotation Coroutines
+    #region Rotation
 
     IEnumerator RotateWholeCube(Vector3 rotationAxis, float angle)
     {
@@ -637,8 +637,8 @@ public class RubiksCubeController : MonoBehaviour
 
         if (axis == PosY) return "White";
         if (axis == NegY) return "Yellow";
-        if (axis == PosX) return "Orange";
-        if (axis == NegX) return "Red";
+        if (axis == PosX) return "Red";
+        if (axis == NegX) return "Orange";
         if (axis == PosZ) return "Green";
         if (axis == NegZ) return "Blue";
 

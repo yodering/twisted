@@ -3,7 +3,15 @@ using UnityEngine;
 public class RubiksCubeGenerator : MonoBehaviour
 {
     public GameObject cubeletPrefab;
-    
+
+    [Header("Scale Settings")]
+    [Tooltip("Global scale for the entire cube (0.05 = small handheld, 0.1 = normal handheld)")]
+    public float globalScale = 0.02f;
+
+    [Header("VR Position Settings")]
+    [Tooltip("Initial position for VR (on the floor in front of player)")]
+    public Vector3 vrStartPosition = new Vector3(0f, -3f, 0.5f);
+
     // Rubik's cube standard colors
     private Color white = Color.white;
     private Color yellow = Color.yellow;
@@ -11,13 +19,22 @@ public class RubiksCubeGenerator : MonoBehaviour
     private Color blue = Color.blue;
     private Color red = Color.red;
     private Color orange = new Color(1f, 0.5f, 0f);
-    private Color black = new Color(0.1f, 0.1f, 0.1f); // Dark grey for cube body
-    
+    private Color black = new Color(0.1f, 0.1f, 0.1f); // dark grey for cube body
+
     void Start()
     {
         GenerateCube();
 
-         transform.rotation = Quaternion.Euler(0, 180, 0);
+        transform.rotation = Quaternion.Euler(0, 180, 0);
+        transform.localScale = Vector3.one * globalScale;
+        transform.position = vrStartPosition;
+
+        // check for floor controller, add if not
+        if (GetComponent<FloorController>() == null)
+        {
+            gameObject.AddComponent<FloorController>();
+            Debug.Log("[CUBE GENERATOR] Added FloorController component");
+        }
     }
     
     void GenerateCube()
@@ -44,7 +61,7 @@ public class RubiksCubeGenerator : MonoBehaviour
                         renderer.material = mat;
                     }
                     
-                    // Add colored stickers to external faces
+                    // add colored stickers to external faces
                     AddStickers(cubelet, x, y, z);
                 }
             }
@@ -56,27 +73,27 @@ public class RubiksCubeGenerator : MonoBehaviour
         float stickerSize = 0.85f; // size of the sticker
         float stickerOffset = 0.51f; // slightly beyond cubelet surface
         
-        // right face - orange
+        // right face - red (matches RubiksCubeController: +X = Red)
         if (x == 1)
-            CreateSticker(cubelet, new Vector3(stickerOffset, 0, 0), stickerSize, orange, "Sticker_Right", true);
-        
-        // left face - red
+            CreateSticker(cubelet, new Vector3(stickerOffset, 0, 0), stickerSize, red, "Sticker_Right", true);
+
+        // left face - orange (matches RubiksCubeController: -X = Orange)
         if (x == -1)
-            CreateSticker(cubelet, new Vector3(-stickerOffset, 0, 0), stickerSize, red, "Sticker_Left", true);
+            CreateSticker(cubelet, new Vector3(-stickerOffset, 0, 0), stickerSize, orange, "Sticker_Left", true);
         
-        // top face - White
+        // top face - white
         if (y == 1)
             CreateSticker(cubelet, new Vector3(0, stickerOffset, 0), stickerSize, white, "Sticker_Top", false);
         
-        // bottom face - Yellow
+        // bottom face - yellow
         if (y == -1)
             CreateSticker(cubelet, new Vector3(0, -stickerOffset, 0), stickerSize, yellow, "Sticker_Bottom", false);
         
-        // front face - Green
+        // front face - green
         if (z == 1)
             CreateSticker(cubelet, new Vector3(0, 0, stickerOffset), stickerSize, green, "Sticker_Front", false);
         
-        // back face - Blue
+        // back face - blue
         if (z == -1)
             CreateSticker(cubelet, new Vector3(0, 0, -stickerOffset), stickerSize, blue, "Sticker_Back", false);
     }
